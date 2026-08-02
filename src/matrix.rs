@@ -1,0 +1,111 @@
+
+struct Matrix {
+    row: usize,
+    col: usize,
+    data: Vec<f32>,
+}
+impl Matrix {
+    fn new(row: usize, col: usize) -> Matrix {
+        Matrix {
+            row,
+            col,
+            data: vec![0.0; row * col],
+        }
+    }
+
+    fn dot_product(&self, matrix: Matrix) -> Option<Matrix> {
+        // check the matrices can be dot produc'd
+        if self.col != matrix.row {
+            return None;
+        }
+        let mut result = Matrix::new(self.row, matrix.col);
+        // for each row of matrix self
+        for r in 0..self.row {
+            // for each column of matrix 2
+            for c in 0..matrix.col {
+                let mut sum = 0.0 as f32;
+                // Dot product of row r of self and column c of matrix
+                for k in 0..self.col {
+                    sum += self.data[r * self.col + k] * matrix.data[k * matrix.col + c];
+                }
+                result.data[r * matrix.col + c] = sum;
+            }
+        }
+        Some(result)
+    }
+    fn add_vector(&mut self, bias: &[f32]) -> Option<()> {
+        if self.col != bias.len() {
+            return None;
+        }
+        for c in 0..self.row {
+            for r in 0..self.col {
+                self.data[r * self.col + c] += bias[c];
+            }
+        }
+        Some(())
+    }
+
+    fn relu(&self) -> Matrix {
+        let mut activated = Matrix::new(self.row, self.col);
+        for i in 0..self.data.len() {
+            activated.data[i] = self.data[i].max(0.0);
+        }
+        activated
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new_matrix() {
+        let m = Matrix::new(2, 3);
+        assert_eq!(m.row, 2);
+        assert_eq!(m.col, 3);
+        assert_eq!(m.data.len(), 6);
+        assert!(m.data.iter().all(|&x| x == 0.0));
+    }
+
+    #[test]
+    fn test_dot_product() {
+        let a = Matrix {
+            row: 2,
+            col: 3,
+            data: vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+        };
+        let b = Matrix {
+            row: 3,
+            col: 2,
+            data: vec![7.0, 8.0, 9.0, 10.0, 11.0, 12.0],
+        };
+        let result = a.dot_product(b).unwrap();
+        assert_eq!(result.row, 2);
+        assert_eq!(result.col, 2);
+        // result multiplied by hand
+        assert_eq!(result.data, vec![58.0, 64.0, 139.0, 154.0]);
+    }
+
+    #[test]
+    fn test_matrix_add_vector() {
+        let mut a = Matrix {
+            row: 2,
+            col: 2,
+            data: vec![1.0, 2.0, 3.0, 4.0],
+        };
+        let b: Vec<f32> = vec![1.0, 2.0];
+        assert!(a.add_vector(&b).is_some());
+        assert_eq!(a.data, vec![2.0, 4.0, 4.0, 6.0]);
+    }
+
+    #[test]
+    fn test_matrix_relu() {
+        let a = Matrix {
+            row: 2,
+            col: 2,
+            data: vec![-0.1, 2.0, 0.0, -1.0],
+        };
+        let act = a.relu();
+        assert_eq!(act.data, vec![0.0, 2.0, 0.0, 0.0]);
+    }
+}
