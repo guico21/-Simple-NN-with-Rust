@@ -17,7 +17,7 @@
 ///    These are exactly `ln(softmax(logits)[i])`.
 /// 5. Loss = `-log_probs[label]` (negative log‑likelihood of the correct class).
 /// 6. Probabilities = `exp(log_probs)`, i.e., the softmax output.
-pub fn cross_entropy_loss(logits: &[f32], label: usize) -> (f32, Vec<f32>) {
+pub fn cross_entropy_loss(logits: &[f32], label: usize) -> (f32, Vec<f32>, Vec<f32>) {
     let mut max_logit = f32::NEG_INFINITY; // this is the smallest possible value in the IEEE 754 ordering
     for value in logits {
         max_logit = max_logit.max(*value);
@@ -29,9 +29,9 @@ pub fn cross_entropy_loss(logits: &[f32], label: usize) -> (f32, Vec<f32>) {
         .iter()
         .map(|&x| (x - max_logit).exp() / sum_exp)
         .collect();
-    let mut grad = probs; // p vector
+    let mut grad = probs.clone(); // p vector
     grad[label] -= 1.0; // subtract one at the correct class
-    (loss, grad)
+    (loss, probs, grad)
 }
 
 // test below written with AI
@@ -60,7 +60,7 @@ mod tests {
         let logits = [2.0, 2.0, 2.0, 2.0];
         let n = logits.len() as f32;
         for label in 0..4 {
-            let (loss, probs) = cross_entropy_loss(&logits, label);
+            let (loss, probs, _grad) = cross_entropy_loss(&logits, label); // <-- updated
             check_probs_sum_to_one(&probs);
             let expected_prob = 1.0 / n;
             for &p in &probs {
@@ -80,7 +80,7 @@ mod tests {
     fn test_one_hot_like_logits() {
         // One logit dominates -> probability close to 1, loss close to 0 if correct
         let logits = [1.0, 10.0, -1.0];
-        let (loss, probs) = cross_entropy_loss(&logits, 1); // label = 1
+        let (loss, probs, _grad) = cross_entropy_loss(&logits, 1); // <-- updated
         check_probs_sum_to_one(&probs);
         assert!(
             probs[1] > 0.999,
@@ -89,7 +89,7 @@ mod tests {
         assert!(loss < 1e-3, "loss should be near 0, got {}", loss);
 
         // If label is wrong, loss should be high
-        let (loss_wrong, _) = cross_entropy_loss(&logits, 0);
+        let (loss_wrong, _, _) = cross_entropy_loss(&logits, 0); // <-- updated
         assert!(
             loss_wrong > 5.0,
             "loss for wrong class should be large, got {}",
@@ -101,7 +101,7 @@ mod tests {
     fn test_large_logits_stability() {
         // Very large values should not cause overflow
         let logits = [1000.0, 1010.0, 990.0];
-        let (loss, probs) = cross_entropy_loss(&logits, 1);
+        let (loss, probs, _grad) = cross_entropy_loss(&logits, 1); // <-- updated
         check_probs_sum_to_one(&probs);
         assert!(probs[1] > 0.99);
         assert!(loss < 1e-3);
@@ -110,7 +110,7 @@ mod tests {
     #[test]
     fn test_negative_logits() {
         let logits = [-5.0, -1.0, -3.0];
-        let (loss, probs) = cross_entropy_loss(&logits, 1);
+        let (loss, probs, _grad) = cross_entropy_loss(&logits, 1); // <-- updated
         check_probs_sum_to_one(&probs);
         // Softmax of [-5, -1, -3] after shifting: max -1 -> [-4,0,-2] -> exp: ~0.0183, 1, ~0.1353, sum=1.1536, probs: 0.0159, 0.867, 0.117
         assert!(approx_eq(probs[1], 0.867, 0.01));
@@ -121,7 +121,7 @@ mod tests {
     fn test_loss_non_negative() {
         let logits = [0.1, 0.2, 0.3];
         for lbl in 0..3 {
-            let (loss, _) = cross_entropy_loss(&logits, lbl);
+            let (loss, _, _) = cross_entropy_loss(&logits, lbl); // <-- updated
             assert!(loss >= 0.0, "loss should be non-negative, got {}", loss);
         }
     }
@@ -130,7 +130,7 @@ mod tests {
     fn test_single_class() {
         // Degenerate case: only one class
         let logits = [42.0];
-        let (loss, probs) = cross_entropy_loss(&logits, 0);
+        let (loss, probs, _grad) = cross_entropy_loss(&logits, 0); // <-- updated
         assert_eq!(probs.len(), 1);
         assert!(approx_eq(probs[0], 1.0, 1e-6));
         assert!(approx_eq(loss, 0.0, 1e-6));
