@@ -10,9 +10,11 @@ pub struct Layer {
     pub w: Matrix,
     pub b: Vec<f32>,
     pub activation: Activation,
-    last_input: Option<Vec<f32>>,
-    last_z: Option<Vec<f32>>,
-    last_a: Option<Vec<f32>>,
+    pub last_input: Option<Vec<f32>>,
+    pub last_z: Option<Vec<f32>>,
+    pub last_a: Option<Vec<f32>>,
+    pub w_grad: Option<Matrix>,   // added for gradient
+    pub b_grad: Option<Vec<f32>>, // added for gradient
 }
 
 impl Layer {
@@ -33,6 +35,8 @@ impl Layer {
             last_input: None,
             last_z: None,
             last_a: None,
+            w_grad: None,
+            b_grad: None,
         }
     }
 
@@ -79,6 +83,8 @@ mod tests {
         assert!(layer.last_input.is_none());
         assert!(layer.last_z.is_none());
         assert!(layer.last_a.is_none());
+        assert!(layer.w_grad.is_none());
+        assert!(layer.b_grad.is_none());
     }
 
     #[test]
@@ -94,6 +100,8 @@ mod tests {
             last_input: None,
             last_z: None,
             last_a: None,
+            w_grad: None,
+            b_grad: None,
         };
         let input = vec![1.0, 1.0, 1.0];
         let output = layer.forward(&input);
@@ -117,6 +125,8 @@ mod tests {
             last_input: None,
             last_z: None,
             last_a: None,
+            w_grad: None,
+            b_grad: None,
         };
         let input = vec![4.0, 5.0, 6.0];
         let output = layer.forward(&input);
