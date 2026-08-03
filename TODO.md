@@ -3,6 +3,7 @@
 - [ ] Memory optimization. Removing data copying where possible
 - [ ] Test for backward layer
 - [ ] test for gradient
+- [ ] RefCell and Rc for reducing allocation of vectors during backwards propagation?
 
 ## Documentation
 - [ ] Add project structure definiton (once done the core architecture and tested the main functionalities)
