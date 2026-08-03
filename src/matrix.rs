@@ -4,7 +4,7 @@ pub struct Matrix {
     pub data: Vec<f32>,
 }
 impl Matrix {
-    fn new(row: usize, col: usize) -> Matrix {
+    pub fn new(row: usize, col: usize) -> Matrix {
         Matrix {
             row,
             col,
@@ -14,7 +14,7 @@ impl Matrix {
 
     /// Performs the dot product between two matrices. The order is: M1 * M2, with
     /// M1 being self.
-    fn dot_product_matrix(&self, matrix: Matrix) -> Option<Matrix> {
+    pub fn dot_product_matrix(&self, matrix: Matrix) -> Option<Matrix> {
         // check the matrices can be dot produc'd
         if self.col != matrix.row {
             return None;
@@ -39,7 +39,7 @@ impl Matrix {
     /// The signature has got a slice since this is more idiomatic and allows the management
     /// of a pure reference to a contiguous data structure with respect referencing Vec<> which
     /// will take also the heap.
-    fn dot_product_vector(&self, v: &[f32]) -> Option<Vec<f32>> {
+    pub fn dot_product_vector(&self, v: &[f32]) -> Option<Vec<f32>> {
         if self.col != v.len() {
             return None;
         }
@@ -54,19 +54,7 @@ impl Matrix {
         Some(output)
     }
 
-    fn add_vector(&mut self, bias: &[f32]) -> Option<()> {
-        if self.col != bias.len() {
-            return None;
-        }
-        for c in 0..self.row {
-            for r in 0..self.col {
-                self.data[r * self.col + c] += bias[c];
-            }
-        }
-        Some(())
-    }
-
-    fn relu(&self) -> Matrix {
+    pub fn relu(&self) -> Matrix {
         let mut activated = Matrix::new(self.row, self.col);
         for i in 0..self.data.len() {
             activated.data[i] = self.data[i].max(0.0);
@@ -118,19 +106,6 @@ mod tests {
         let result = a.dot_product_vector(&b);
         // result multiplied by hand
         assert_eq!(result, Some(vec![14.0, 32.0]));
-    }
-
-    #[test]
-    fn test_matrix_add_vector() {
-        let mut a = Matrix {
-            row: 2,
-            col: 2,
-            data: vec![1.0, 2.0, 3.0, 4.0],
-        };
-        let b: Vec<f32> = vec![1.0, 2.0];
-        assert!(a.add_vector(&b).is_some());
-        // result multiplied by hand
-        assert_eq!(a.data, vec![2.0, 4.0, 4.0, 6.0]);
     }
 
     #[test]
