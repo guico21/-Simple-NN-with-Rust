@@ -178,4 +178,98 @@ mod tests {
         assert_eq!(output, vec![5.0, 7.0]);
         assert_eq!(layer.last_z, Some(vec![5.0, 7.0]));
     }
+
+    #[test]
+    fn test_backward_gradients() {
+        // Manually construct a layer (2 outputs, 3 inputs) with ReLU activation.
+        // Weights (2x3):
+        // [ 1.0,  2.0,  3.0]
+        // [-1.0, -2.0, -3.0]
+        let mut layer = Layer {
+            w: Matrix::new(2, 3, Some(vec![1.0, 2.0, 3.0, -1.0, -2.0, -3.0])),
+            b: vec![0.5, -0.5],
+            activation: Activation::ReLU,
+            last_input: None,
+            last_z: None,
+            last_a: None,
+            w_grad: None,
+            b_grad: None,
+        };
+        let input = vec![1.0, 2.0, -1.0];
+        let d_out = vec![1.0, -1.0];
+
+        // Forward then backward to populate caches and analytic gradients.
+        let _ = layer.forward(&input);
+        let _ = layer.backward(&d_out);
+
+        // Snapshot the analytic gradients (clone so we can mutate `layer`
+        // during the finite-difference loop below without borrow conflicts).
+        let analytic_w = layer.w_grad.as_ref().expect("w_grad not set").data.clone();
+        let analytic_b = layer.b_grad.as_ref().expect("b_grad not set").clone();
+
+        // Treat the layer output `a` as feeding into a scalar loss
+        //   L(a) = sum_i d_out[i] * a[i]
+        // so that dL/da = d_out. The numerical gradient of L with respect to
+        // each weight/bias should match the stored analytic gradients.
+        let eps = 1e-3_f32; // oringal was 1e-4, but with rounding on f32, we kept receiving 1.001358 making the error
+        let n_out = layer.w.row;
+        let n_in = layer.w.col;
+        let loss =
+            |a: &[f32], d: &[f32]| -> f32 { a.iter().zip(d.iter()).map(|(ai, di)| ai * di).sum() };
+
+        // Numerical w_grad via central difference.
+        let mut num_w = vec![0.0; n_out * n_in];
+        for r in 0..n_out {
+            for c in 0..n_in {
+                let idx = r * n_in + c;
+                let orig = layer.w.data[idx];
+
+                layer.w.data[idx] = orig + eps;
+                let l_plus = loss(&layer.forward(&input), &d_out);
+
+                layer.w.data[idx] = orig - eps;
+                let l_minus = loss(&layer.forward(&input), &d_out);
+
+                layer.w.data[idx] = orig; // restore
+                num_w[idx] = (l_plus - l_minus) / (2.0 * eps);
+            }
+        }
+
+        // Numerical b_grad via central difference.
+        let mut num_b = vec![0.0; n_out];
+        for i in 0..n_out {
+            let orig = layer.b[i];
+
+            layer.b[i] = orig + eps;
+            let l_plus = loss(&layer.forward(&input), &d_out);
+
+            layer.b[i] = orig - eps;
+            let l_minus = loss(&layer.forward(&input), &d_out);
+
+            layer.b[i] = orig; // restore
+            num_b[i] = (l_plus - l_minus) / (2.0 * eps);
+        }
+
+        // Compare analytic vs numerical within tolerance.
+        // Note: with input=[1,2,-1], b=[0.5,-0.5], z=[2.5,-2.5] — safely away
+        // from the ReLU kink at 0, so finite differences should be accurate.
+        for (i, (a, n)) in analytic_w.iter().zip(num_w.iter()).enumerate() {
+            assert!(
+                (a - n).abs() < 1e-3,
+                "w_grad mismatch at [{}]: analytic={}, numerical={}",
+                i,
+                a,
+                n
+            );
+        }
+        for (i, (a, n)) in analytic_b.iter().zip(num_b.iter()).enumerate() {
+            assert!(
+                (a - n).abs() < 1e-3,
+                "b_grad mismatch at [{}]: analytic={}, numerical={}",
+                i,
+                a,
+                n
+            );
+        }
+    }
 }
