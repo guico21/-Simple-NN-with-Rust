@@ -67,6 +67,23 @@ impl Matrix {
         Some(output)
     }
 
+    /// Performs the dot product between a transposed matrix and a vector. So M' * v, with ' = Transposed
+    pub fn transpose_dot_vector(&self, v: &[f32]) -> Option<Vec<f32>> {
+        if self.row != v.len() {
+            return None;
+        }
+        let mut result = vec![0.0; self.col];
+        for i in 0..self.col {
+            let mut sum = 0.0;
+            for j in 0..self.row {
+                sum += self.data[j * self.col + i] * v[j];
+            }
+            result[i] = sum;
+        }
+        Some(result)
+    }
+
+    /// Perform the ReLU on a Matrix. Return a new Matrix.
     pub fn relu(&self) -> Matrix {
         let mut activated = Matrix::new(self.row, self.col, None);
         for i in 0..self.data.len() {
@@ -135,5 +152,21 @@ mod tests {
         };
         let act = a.relu();
         assert_eq!(act.data, vec![0.0, 2.0, 0.0, 0.0]);
+    }
+
+    #[test]
+    fn test_transpose_dot_vector() {
+        let w = Matrix {
+            row: 2,
+            col: 3,
+            data: vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+        };
+        let v = vec![1.0, 10.0];
+        let result = w.transpose_dot_vector(&v).unwrap();
+        // Expected:
+        // result[0] = w[0][0]*v[0] + w[1][0]*v[1] = 1*1 + 4*10 = 41
+        // result[1] = 2*1 + 5*10 = 52
+        // result[2] = 3*1 + 6*10 = 63
+        assert_eq!(result, vec![41.0, 52.0, 63.0]);
     }
 }
