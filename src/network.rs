@@ -27,9 +27,12 @@ impl Network {
         }
         Network { layers }
     }
-    pub fn forward_pass(&mut self, input: &[f32]) {}
-    pub fn cross_entropy_loss(logits: &[f32], label: usize) -> (f32, Vec<f32>) {
-        (0.0, vec![1.0, 1.0])
+    pub fn forward_pass(&mut self, input: &[f32]) -> Vec<f32> {
+        let mut activation = input.to_vec(); // <- #WARN I am copying memory here
+        for layer in self.layers.iter_mut() {
+            activation = layer.forward(&activation);
+        }
+        activation
     }
     pub fn backward_pass(&mut self, grad_output: &[f32]) {}
     pub fn update_weights(&mut self, learning_rate: f32) {}
@@ -58,5 +61,33 @@ mod tests {
         assert_eq!(net.layers[2].w.row, 10);
         assert_eq!(net.layers[2].w.col, 64);
         assert!(matches!(net.layers[2].activation, Activation::Linear));
+    }
+
+    #[test]
+    fn test_forward_pass() {
+        // 2 inputs -> 3 hidden (ReLU) -> 1 output (Linear)
+        let mut net = Network::new(&[2, 3, 1]);
+        // Overwrite weights with deterministic values (all 1.0) and biases 0.0
+        net.layers[0].w.data = vec![1.0; 3 * 2];
+        net.layers[0].b = vec![0.0; 3];
+        // Layer 1: 1x3 matrix of all 1.0
+        net.layers[1].w.data = vec![1.0; 1 * 3];
+        net.layers[1].b = vec![0.0; 1];
+        let input = vec![1.0, 2.0];
+        let output = net.forward_pass(&input);
+        // Expected:
+        // Hidden layer z = [1*1+1*2=3.0, 3.0, 3.0] + 0.0 = [3,3,3] -> ReLU -> [3,3,3]
+        // Output layer z = [1*3+1*3+1*3=9.0] + 0.0 = [9.0] -> Linear -> [9.0]
+        assert_eq!(output, vec![9.0]);
+        // Verify caches on the hidden layer (index 0)
+        let hidden = &net.layers[0];
+        assert_eq!(hidden.last_input.as_ref().unwrap(), &vec![1.0, 2.0]);
+        assert_eq!(hidden.last_z.as_ref().unwrap(), &vec![3.0, 3.0, 3.0]);
+        assert_eq!(hidden.last_a.as_ref().unwrap(), &vec![3.0, 3.0, 3.0]);
+        // Verify caches on the output layer (index 1)
+        let out_layer = &net.layers[1];
+        assert_eq!(out_layer.last_input.as_ref().unwrap(), &vec![3.0, 3.0, 3.0]);
+        assert_eq!(out_layer.last_z.as_ref().unwrap(), &vec![9.0]);
+        assert_eq!(out_layer.last_a.as_ref().unwrap(), &vec![9.0]);
     }
 }

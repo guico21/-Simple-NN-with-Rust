@@ -10,9 +10,11 @@ pub struct Layer {
     pub w: Matrix,
     pub b: Vec<f32>,
     pub activation: Activation,
-    last_input: Option<Vec<f32>>,
-    last_z: Option<Vec<f32>>,
-    last_a: Option<Vec<f32>>,
+    pub last_input: Option<Vec<f32>>,
+    pub last_z: Option<Vec<f32>>,
+    pub last_a: Option<Vec<f32>>,
+    pub w_grad: Option<Matrix>,   // added for gradient
+    pub b_grad: Option<Vec<f32>>, // added for gradient
 }
 
 impl Layer {
@@ -33,6 +35,8 @@ impl Layer {
             last_input: None,
             last_z: None,
             last_a: None,
+            w_grad: None,
+            b_grad: None,
         }
     }
 
@@ -60,6 +64,47 @@ impl Layer {
         self.last_a = Some(a.clone());
         a
     }
+
+    pub fn backward(&mut self, d_out: &[f32]) -> Vec<f32> {
+        // get caches. there is a panic if forward was not called before
+        // thus caches will be None.
+        // WARN must improve the erro handling here
+        let z = match &self.last_z {
+            Some(z) => z,
+            None => panic!("Forward not called due to last_z."),
+        };
+        let input = match &self.last_input {
+            Some(z) => z,
+            None => panic!("Forward not called due to last_input"),
+        };
+        // activation backward
+        let d_z = match self.activation {
+            Activation::ReLU => d_out
+                .iter()
+                .zip(z.iter())
+                .map(|(&do_val, &z_val)| if z_val > 0.0 { do_val } else { 0.0 })
+                .collect(),
+            Activation::Linear => d_out.to_vec(),
+        };
+        // weight gradient
+        let n_in = self.w.col;
+        let n_out = self.w.row;
+        let mut w_grad_data = vec![0.0; n_out * n_in];
+        for r in 0..n_out {
+            for c in 0..n_in {
+                w_grad_data[r * n_in + c] = d_z[r] * input[c];
+            }
+        }
+        self.w_grad = Some(Matrix::new(n_out, n_in, Some(w_grad_data)));
+        // bias gradient
+        self.b_grad = Some(d_z.clone());
+        // gradient with respect the input (for previous layer)
+        let d_prev = self
+            .w
+            .transpose_dot_vector(&d_z)
+            .expect("Dimension mismatch in backward.");
+        d_prev
+    }
 }
 
 #[cfg(test)]
@@ -79,6 +124,8 @@ mod tests {
         assert!(layer.last_input.is_none());
         assert!(layer.last_z.is_none());
         assert!(layer.last_a.is_none());
+        assert!(layer.w_grad.is_none());
+        assert!(layer.b_grad.is_none());
     }
 
     #[test]
@@ -94,6 +141,8 @@ mod tests {
             last_input: None,
             last_z: None,
             last_a: None,
+            w_grad: None,
+            b_grad: None,
         };
         let input = vec![1.0, 1.0, 1.0];
         let output = layer.forward(&input);
@@ -117,6 +166,8 @@ mod tests {
             last_input: None,
             last_z: None,
             last_a: None,
+            w_grad: None,
+            b_grad: None,
         };
         let input = vec![4.0, 5.0, 6.0];
         let output = layer.forward(&input);
