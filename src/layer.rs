@@ -48,7 +48,7 @@ impl Layer {
             Some(matrix) => matrix,
             None => {
                 eprintln!("Warning: addign vector to a matrix failed, returning zeros");
-                vec![0.0; input.len()]
+                vec![0.0; self.w.row]
             }
         };
         self.last_input = Some(input.to_vec());
