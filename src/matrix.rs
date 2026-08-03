@@ -1,8 +1,7 @@
-
-struct Matrix {
-    row: usize,
-    col: usize,
-    data: Vec<f32>,
+pub struct Matrix {
+    pub row: usize,
+    pub col: usize,
+    pub data: Vec<f32>,
 }
 impl Matrix {
     fn new(row: usize, col: usize) -> Matrix {
@@ -13,7 +12,9 @@ impl Matrix {
         }
     }
 
-    fn dot_product(&self, matrix: Matrix) -> Option<Matrix> {
+    /// Performs the dot product between two matrices. The order is: M1 * M2, with
+    /// M1 being self.
+    fn dot_product_matrix(&self, matrix: Matrix) -> Option<Matrix> {
         // check the matrices can be dot produc'd
         if self.col != matrix.row {
             return None;
@@ -33,6 +34,26 @@ impl Matrix {
         }
         Some(result)
     }
+
+    ///Performs the dot product between a matrix and a vector. The order is: M * v.
+    /// The signature has got a slice since this is more idiomatic and allows the management
+    /// of a pure reference to a contiguous data structure with respect referencing Vec<> which
+    /// will take also the heap.
+    fn dot_product_vector(&self, v: &[f32]) -> Option<Vec<f32>> {
+        if self.col != v.len() {
+            return None;
+        }
+        let mut output = vec![0.0; self.row];
+        for r in 0..self.row {
+            let mut sum = 0.0;
+            for c in 0..self.col {
+                sum += self.data[r * self.col + c] * v[c];
+            }
+            output[r] = sum;
+        }
+        Some(output)
+    }
+
     fn add_vector(&mut self, bias: &[f32]) -> Option<()> {
         if self.col != bias.len() {
             return None;
@@ -68,7 +89,7 @@ mod tests {
     }
 
     #[test]
-    fn test_dot_product() {
+    fn test_dot_product_matrix() {
         let a = Matrix {
             row: 2,
             col: 3,
@@ -79,11 +100,24 @@ mod tests {
             col: 2,
             data: vec![7.0, 8.0, 9.0, 10.0, 11.0, 12.0],
         };
-        let result = a.dot_product(b).unwrap();
+        let result = a.dot_product_matrix(b).unwrap();
         assert_eq!(result.row, 2);
         assert_eq!(result.col, 2);
         // result multiplied by hand
         assert_eq!(result.data, vec![58.0, 64.0, 139.0, 154.0]);
+    }
+
+    #[test]
+    fn test_dot_product_vector() {
+        let a = Matrix {
+            row: 2,
+            col: 3,
+            data: vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+        };
+        let b = vec![1.0, 2.0, 3.0];
+        let result = a.dot_product_vector(&b);
+        // result multiplied by hand
+        assert_eq!(result, Some(vec![14.0, 32.0]));
     }
 
     #[test]
@@ -95,6 +129,7 @@ mod tests {
         };
         let b: Vec<f32> = vec![1.0, 2.0];
         assert!(a.add_vector(&b).is_some());
+        // result multiplied by hand
         assert_eq!(a.data, vec![2.0, 4.0, 4.0, 6.0]);
     }
 
