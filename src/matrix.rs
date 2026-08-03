@@ -4,11 +4,24 @@ pub struct Matrix {
     pub data: Vec<f32>,
 }
 impl Matrix {
-    pub fn new(row: usize, col: usize) -> Matrix {
+    pub fn new(row: usize, col: usize, data: Option<Vec<f32>>) -> Matrix {
+        let matrix_data = match data {
+            Some(d) => {
+                if d.len() != (row * col) {
+                    eprint!(
+                        "Provided data length does not match row * col. Returning same matrix."
+                    );
+                    vec![0.0; row * col]
+                } else {
+                    d
+                }
+            }
+            None => vec![0.0; row * col], // Default to 0.0
+        };
         Matrix {
             row,
             col,
-            data: vec![0.0; row * col],
+            data: matrix_data,
         }
     }
 
@@ -19,7 +32,7 @@ impl Matrix {
         if self.col != matrix.row {
             return None;
         }
-        let mut result = Matrix::new(self.row, matrix.col);
+        let mut result = Matrix::new(self.row, matrix.col, None);
         // for each row of matrix self
         for r in 0..self.row {
             // for each column of matrix 2
@@ -55,7 +68,7 @@ impl Matrix {
     }
 
     pub fn relu(&self) -> Matrix {
-        let mut activated = Matrix::new(self.row, self.col);
+        let mut activated = Matrix::new(self.row, self.col, None);
         for i in 0..self.data.len() {
             activated.data[i] = self.data[i].max(0.0);
         }
@@ -69,11 +82,16 @@ mod tests {
 
     #[test]
     fn test_new_matrix() {
-        let m = Matrix::new(2, 3);
+        let m = Matrix::new(2, 3, None);
         assert_eq!(m.row, 2);
         assert_eq!(m.col, 3);
         assert_eq!(m.data.len(), 6);
         assert!(m.data.iter().all(|&x| x == 0.0));
+        let m2 = Matrix::new(2, 3, Some(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]));
+        assert_eq!(m2.data, vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+        // Test fallback to zeros when length is incorrect
+        let m3 = Matrix::new(2, 3, Some(vec![1.0, 2.0, 3.0, 4.0]));
+        assert!(m3.data.iter().all(|&x| x == 0.0));
     }
 
     #[test]
