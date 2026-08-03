@@ -7,9 +7,9 @@ pub enum Activation {
 }
 
 pub struct Layer {
-    w: Matrix,
-    b: Vec<f32>,
-    activation: Activation,
+    pub w: Matrix,
+    pub b: Vec<f32>,
+    pub activation: Activation,
     last_input: Option<Vec<f32>>,
     last_z: Option<Vec<f32>>,
     last_a: Option<Vec<f32>>,
