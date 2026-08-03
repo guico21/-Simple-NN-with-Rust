@@ -4,6 +4,7 @@
 - [ ] Test for backward layer
 - [ ] test for gradient
 - [ ] RefCell and Rc for reducing allocation of vectors during backwards propagation?
+- [ ] Make the values of images and size parametric. right now is all hard coded.
 
 ## Documentation
 - [ ] Add project structure definiton (once done the core architecture and tested the main functionalities)
