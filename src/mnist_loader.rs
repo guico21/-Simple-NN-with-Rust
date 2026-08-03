@@ -1,11 +1,25 @@
+// TODO: Make the values of images and size parametric. right now is all hard coded.
+
 pub struct MnistData {
     // also in this case, data are stored in a long vector. that is to ensure memory management is easier (for the laptop, not for me)
-    pub images: Vec<f32>,
-    pub labels: Vec<u8>,   // image label
-    pub num_images: usize, // number of images. not sure if I will use it
+    pub images: Vec<f32>, // length = 10_000 * 784 = 7_840_000 for the MNIST dataset
+    pub labels: Vec<u8>,  // image label
+}
+
+impl MnistData {
+    /// Returns a 28x28 image given the index.
+    pub fn get_image(&self, i: usize) -> &[f32] {
+        let start = i * 784;
+        &self.images[start..start + 784]
+    }
 }
 
 /// Loads the data from the data files of the MNIST dataset, considering images a 28x28 (784) format over a vector.
+/// The info from the website mentions that images are stored as un
+/// ## File Format
+/// Each file has 1000 training examples. Each training example is of size 28x28 pixels.
+/// The pixels are stored as unsigned chars (1 byte) and take values from 0 to 255.
+/// The first 28x28 bytes of the file correspond to the first training example, the next 28x28 bytes correspond to the next example and so on.
 pub fn load_mnist_data(dir: &str) -> Result<MnistData, String> {
     let mut images = Vec::new();
     let mut labels = Vec::new();
@@ -33,10 +47,5 @@ pub fn load_mnist_data(dir: &str) -> Result<MnistData, String> {
             labels.push(digit);
         }
     }
-    let num_images = labels.len();
-    Ok(MnistData {
-        images,
-        labels,
-        num_images,
-    })
+    Ok(MnistData { images, labels })
 }
