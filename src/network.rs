@@ -27,6 +27,7 @@ impl Network {
         }
         Network { layers }
     }
+
     pub fn forward_pass(&mut self, input: &[f32]) -> Vec<f32> {
         let mut activation = input.to_vec(); // <- #WARN I am copying memory here
         for layer in self.layers.iter_mut() {
@@ -34,7 +35,14 @@ impl Network {
         }
         activation
     }
-    pub fn backward_pass(&mut self, grad_output: &[f32]) {}
+
+    pub fn backward_pass(&mut self, grad_output: &[f32]) {
+        let mut grad = grad_output.to_vec();
+        for layer in self.layers.iter_mut().rev() {
+            grad = layer.backward(&grad);
+        }
+    }
+
     pub fn update_weights(&mut self, learning_rate: f32) {}
 }
 
