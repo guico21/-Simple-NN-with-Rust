@@ -43,7 +43,25 @@ impl Network {
         }
     }
 
-    pub fn update_weights(&mut self, learning_rate: f32) {}
+    pub fn update_weights(&mut self, learning_rate: f32) {
+        for layer in self.layers.iter_mut() {
+            // weight update
+            if let Some(w_grad) = &layer.w_grad {
+                for (w, &gw) in layer.w.data.iter_mut().zip(w_grad.data.iter()) {
+                    *w = *w - (learning_rate * gw);
+                }
+            }
+            // bias update
+            if let Some(b_grad) = &layer.b_grad {
+                for (b, &gb) in layer.b.iter_mut().zip(b_grad.iter()) {
+                    *b = *b - (learning_rate * gb);
+                }
+            }
+            // clearing gradients. they will be recalculated the next backward pass
+            layer.w_grad = None;
+            layer.b_grad = None;
+        }
+    }
 }
 
 #[cfg(test)]

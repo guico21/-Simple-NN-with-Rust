@@ -11,6 +11,21 @@ pub fn add_vector(vector_1: &[f32], vector_2: &[f32]) -> Option<Vec<f32>> {
     Some(result)
 }
 
+pub fn argmax(v: &[f32]) -> Option<usize> {
+    if v.is_empty() {
+        return None;
+    }
+    let mut max_index = 0;
+    let mut max_value = v[0];
+    for i in 1..v.len() {
+        if v[i] > max_value {
+            max_value = v[i];
+            max_index = i;
+        }
+    }
+    Some(max_index)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -25,5 +40,12 @@ mod tests {
             Some(vec![11.0, 13.0, 15.0, 17.0]),
             "The sum of two Nx1 vectors is NOT successfull."
         );
+    }
+
+    #[test]
+    fn test_argmax() {
+        let v: Vec<f32> = vec![0.0, 0.1, -0.03, 1.0, 3.0, 5.56];
+        let result = argmax(&v);
+        assert_eq!(result, Some(5));
     }
 }
