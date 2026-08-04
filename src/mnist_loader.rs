@@ -24,6 +24,7 @@ pub fn load_mnist_data(dir: &str) -> Result<MnistData, String> {
     let mut images = Vec::new();
     let mut labels = Vec::new();
     for digit in 0..=9 {
+        // <- TODO classes here are hard coded.
         let path = format!("{}/data{}", dir, digit);
         // below we read the contents of a vile into a Vec<u8>
         // in case of failure we have Err(io_error)
@@ -33,6 +34,7 @@ pub fn load_mnist_data(dir: &str) -> Result<MnistData, String> {
             Err(e) => return Err(format!("failed to read {}: {}", path, e)),
         };
         if bytes.len() != 1000 * 784 {
+            // TODO remove hard coded
             // 784 = 28*28
             return Err(format!(
                 "The file in {} has {} bytes. Expected {}.",
@@ -48,4 +50,46 @@ pub fn load_mnist_data(dir: &str) -> Result<MnistData, String> {
         }
     }
     Ok(MnistData { images, labels })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const DATA_DIR: &str = "./data";
+
+    #[test]
+    fn test_load_mnist_data() {
+        assert!(
+            std::path::Path::new(DATA_DIR).is_dir(),
+            "Test data directory '{}' not found. \
+             Please ensure the MNIST data files (data0..data9) are present.",
+            DATA_DIR
+        );
+
+        let mnist = load_mnist_data(DATA_DIR)
+            .expect("Failure in loading mnist data. However the path exist.");
+        let mut expected_images = Vec::new();
+        let mut expected_labels = Vec::new();
+        for digit in 0u8..=9 {
+            let path = format!("{}/data{}", DATA_DIR, digit);
+            let bytes = std::fs::read(&path)
+                .unwrap_or_else(|e| panic!("Failed to read required test file {}: {}", path, e));
+            // Convert each byte to f32/255.0 exactly as the function does.
+            expected_images.extend(bytes.iter().map(|x| *x as f32 / 255.0));
+            // Each file contains multiple 784‑byte images; one label per image.
+            let num_images = bytes.len() / 784;
+            expected_labels.extend(std::iter::repeat(digit).take(num_images));
+        }
+        assert_eq!(
+            mnist.images.len(),
+            expected_images.len(),
+            "Number of image pixels mismatch."
+        );
+        assert_eq!(
+            mnist.labels.len(),
+            expected_labels.len(),
+            "Number of labels mismatch."
+        );
+    }
 }
