@@ -28,3 +28,6 @@ Temporary Items
 /target/
 **/*.rs.bk
 Cargo.lock
+
+## Project
+/data*
